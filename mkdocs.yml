@@ -102,7 +102,7 @@ extra:
   generator: false
   social:
     - icon: fontawesome/brands/youtube
-     link: https://www.youtube.com/@NathalieDianeWandji
+      link: https://www.youtube.com/@NathalieDianeWandji
 
 extra_css:
   - assets/stylesheets/extra.css
