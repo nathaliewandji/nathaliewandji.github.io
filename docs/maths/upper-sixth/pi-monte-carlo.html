@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>π par Monte-Carlo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout : cible carrée à gauche, pupitre à droite, courbe de convergence en pleine largeur dessous */
+:root{
+  --bg:#eef1f4;
+  --surface:#ffffff;
+  --ink:#16202b;
+  --muted:#5b6876;
+  --line:#d3dae2;
+  --inside:#2f5d8a;
+  --outside:#d9822b;
+  --band:rgba(47,93,138,.13);
+  --theory:#c43d4b;
+  --f-display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#10161d;--surface:#18212b;--ink:#e6ebf0;--muted:#97a3b0;--line:#2a3643;
+  --inside:#6fa3d6;--outside:#f0a04b;--band:rgba(111,163,214,.16);--theory:#ff7b86;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10161d;--surface:#18212b;--ink:#e6ebf0;--muted:#97a3b0;--line:#2a3643;
+  --inside:#6fa3d6;--outside:#f0a04b;--band:rgba(111,163,214,.16);--theory:#ff7b86;color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 40px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+header{display:flex;flex-direction:column;gap:6px}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--f-display);font-weight:800;font-size:clamp(28px,4.6vw,44px);line-height:1.05;margin:0;text-wrap:balance}
+.lede{margin:0;color:var(--muted);max-width:64ch}
+
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;min-width:0}
+canvas{display:block;width:100%}
+#cv{max-width:620px;margin:0 auto;aspect-ratio:1/1;height:auto}
+.legend{display:flex;flex-wrap:wrap;gap:16px;padding:8px 6px 2px;font-size:13px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--inside)}
+.dot.o{background:var(--outside)}
+.sw{width:16px;height:0;border-top:2px solid var(--theory)}
+.sw.b{height:10px;border:none;background:var(--band)}
+.sw.e{border-top-color:var(--ink)}
+
+.panel{display:flex;flex-direction:column;gap:18px}
+.group{display:flex;flex-direction:column;gap:12px}
+.group h2{font-family:var(--f-mono);font-size:12px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0}
+.estimate{display:flex;flex-direction:column;gap:2px}
+.estimate .val{font-family:var(--f-display);font-weight:800;font-size:46px;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.estimate .val .ok{color:var(--inside)}
+.estimate .val .ko{color:var(--muted);opacity:.6}
+.estimate .ref{font-family:var(--f-mono);font-size:13px;color:var(--muted)}
+.ctl{display:flex;flex-direction:column;gap:4px}
+.ctl label{display:flex;justify-content:space-between;font-weight:500;font-size:14px}
+.ctl output{font-family:var(--f-mono);font-variant-numeric:tabular-nums;color:var(--inside)}
+input[type=range]{width:100%;accent-color:var(--inside)}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+button{font:inherit;font-weight:600;font-size:14px;padding:9px 10px;border-radius:9px;border:1px solid var(--line);
+  background:var(--surface);color:var(--ink);cursor:pointer}
+button:hover{border-color:var(--inside)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--inside);outline-offset:2px}
+button.primary{background:var(--inside);border-color:var(--inside);color:var(--surface)}
+button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--surface)}
+
+table{width:100%;border-collapse:collapse;font-size:14px}
+td{padding:6px 4px;border-bottom:1px solid var(--line);text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+td:first-child{text-align:left;font-family:var(--f-body);color:var(--muted)}
+
+.conv h2{font-family:var(--f-display);font-weight:600;font-size:18px;margin:4px 6px 2px}
+.conv p{margin:0 6px 8px;color:var(--muted);font-size:14px;max-width:70ch}
+#chart{height:260px}
+
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px;border-top:1px solid var(--line);padding-top:18px}
+.notes h3{font-family:var(--f-display);font-weight:600;font-size:18px;margin:0 0 6px}
+.notes p{margin:0;color:var(--muted);max-width:60ch}
+.formula{font-family:var(--f-mono);font-size:14px;color:var(--ink);background:var(--band);padding:6px 10px;border-radius:6px;display:inline-block;margin-top:8px;max-width:100%;overflow-x:auto}
+</style>
+<style>body{margin:0}[hidden]{display:none!important}.site-back{align-self:flex-start;font-size:14px;font-weight:500;color:var(--muted);text-decoration:none}.site-back:hover{color:var(--ink)}</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="site-back" href="index.html">← Retour au niveau</a>
+  <header>
+    <div class="eyebrow">Probabilités · Méthode de Monte-Carlo</div>
+    <h1>π par Monte-Carlo</h1>
+    <p class="lede">On jette des points au hasard dans un carré de côté 2. Le disque inscrit couvre une fraction π/4 de sa surface. En comptant les points tombés dans le disque, on obtient une estimation de π, sans aucune formule de géométrie.</p>
+  </header>
+
+  <div class="grid">
+    <div class="card">
+      <canvas id="cv" aria-label="Carré avec disque inscrit et points aléatoires"></canvas>
+      <div class="legend">
+        <span><i class="dot"></i>Dans le disque</span>
+        <span><i class="dot o"></i>Hors du disque</span>
+      </div>
+    </div>
+
+    <aside class="panel">
+      <div class="group">
+        <h2>Estimation</h2>
+        <div class="estimate">
+          <div class="val" id="est">–</div>
+          <div class="ref">π = 3,14159265… · <span id="digits">0 décimale correcte</span></div>
+        </div>
+        <table>
+          <tbody>
+            <tr><td>Points lancés N</td><td id="nTot">0</td></tr>
+            <tr><td>Dans le disque</td><td id="nIn">0</td></tr>
+            <tr><td>Erreur |estimation − π|</td><td id="err">–</td></tr>
+            <tr><td>Erreur typique attendue</td><td id="errTh">–</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="group">
+        <h2>Lancer</h2>
+        <div class="ctl"><label for="rate">Vitesse (points/s) <output id="rateOut">100</output></label>
+          <input id="rate" type="range" min="0" max="100" step="1" value="50"></div>
+        <div class="btns">
+          <button id="run" aria-pressed="true">Pause</button>
+          <button id="one">+1 point</button>
+          <button id="tenk">+10 000</button>
+          <button id="million" class="primary">+1 000 000</button>
+        </div>
+        <button id="reset">Effacer les points</button>
+      </div>
+    </aside>
+  </div>
+
+  <div class="card conv">
+    <h2>Convergence vers π</h2>
+    <p>Axe horizontal en échelle logarithmique. La bande bleue montre où l'estimation tombe dans 95 % des cas : elle se resserre comme 1/√N. Pour gagner une décimale, il faut 100 fois plus de points.</p>
+    <canvas id="chart" aria-label="Courbe de l'estimation de π en fonction du nombre de points"></canvas>
+    <div class="legend">
+      <span><i class="sw e"></i>Estimation</span>
+      <span><i class="sw"></i>Valeur exacte de π</span>
+      <span><i class="sw b"></i>Intervalle à 95 %</span>
+    </div>
+  </div>
+
+  <section class="notes">
+    <div>
+      <h3>Le principe</h3>
+      <p>Un point (x, y) tiré uniformément dans [−1, 1]² est dans le disque si x² + y² ≤ 1. La probabilité de cet événement vaut l'aire du disque divisée par l'aire du carré.</p>
+      <span class="formula">P = π / 4 &nbsp;⇒&nbsp; π ≈ 4 × (points dedans) / N</span>
+    </div>
+    <div>
+      <h3>Ce qu'il faut observer</h3>
+      <p>Les premières estimations sautent beaucoup. Au-delà de 10 000 points, elles restent proches de 3,14. Même avec un million de points, on n'obtient en général que deux ou trois décimales justes.</p>
+    </div>
+    <div>
+      <h3>Pourquoi l'utiliser alors</h3>
+      <p>Pour π, il existe bien mieux. Mais la même idée calcule des aires, des volumes ou des intégrales en grande dimension, où les méthodes classiques échouent. Elle sert en physique, en finance et en infographie.</p>
+    </div>
+  </section>
+</div>
+
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const cv=$('cv'),ctx=cv.getContext('2d'),ch=$('chart'),cctx=ch.getContext('2d');
+const layer=document.createElement('canvas'),lctx=layer.getContext('2d');
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const PI=Math.PI,CAP=200000;
+const fr=(x,d)=>x.toLocaleString('fr-FR',{minimumFractionDigits:d,maximumFractionDigits:d});
+
+let total=0,inside=0,running=!reduce,rate=100,acc=0,S=0,dpr=1;
+let stored=new Float32Array(CAP*2),nStored=0;
+let hist=[],nextRec=1,tok={};
+
+function readTok(){const cs=getComputedStyle(document.documentElement);const g=v=>cs.getPropertyValue(v).trim();
+  tok={surface:g('--surface'),ink:g('--ink'),muted:g('--muted'),line:g('--line'),inn:g('--inside'),out:g('--outside'),band:g('--band'),th:g('--theory'),mono:g('--f-mono')}}
+
+function pointSize(){return Math.max(1,S/260)}
+function plot(x,y){const s=pointSize();const isIn=x*x+y*y<=1;
+  lctx.fillStyle=isIn?tok.inn:tok.out;
+  lctx.fillRect((x+1)/2*S*dpr-s*dpr/2,(1-y)/2*S*dpr-s*dpr/2,s*dpr,s*dpr)}
+
+function redrawLayer(){
+  lctx.clearRect(0,0,layer.width,layer.height);
+  const s=pointSize()*dpr;
+  for(const pass of [0,1]){
+    lctx.fillStyle=pass?tok.out:tok.inn;
+    for(let i=0;i<nStored;i++){const x=stored[2*i],y=stored[2*i+1];const isIn=x*x+y*y<=1;
+      if(isIn===!!pass)continue;lctx.fillRect((x+1)/2*S*dpr-s/2,(1-y)/2*S*dpr-s/2,s,s)}
+  }
+}
+
+function layout(){
+  readTok();dpr=window.devicePixelRatio||1;
+  S=Math.round(cv.clientWidth);
+  cv.width=layer.width=S*dpr;cv.height=layer.height=S*dpr;
+  ctx.setTransform(1,0,0,1,0,0);
+  redrawLayer();
+  const cw=ch.clientWidth,chh=ch.clientHeight;
+  ch.width=cw*dpr;ch.height=chh*dpr;cctx.setTransform(dpr,0,0,dpr,0,0);
+}
+
+function add(m,draw=true){
+  for(let i=0;i<m;i++){
+    const x=Math.random()*2-1,y=Math.random()*2-1;
+    total++;if(x*x+y*y<=1)inside++;
+    if(nStored<CAP){stored[2*nStored]=x;stored[2*nStored+1]=y;nStored++;if(draw)plot(x,y)}
+    if(total>=nextRec){hist.push([total,4*inside/total]);nextRec=Math.max(total+1,Math.ceil(total*1.04))}
+  }
+}
+
+function reset(){total=inside=0;nStored=0;hist=[];nextRec=1;lctx.clearRect(0,0,layer.width,layer.height);updateStats()}
+
+function updateStats(){
+  $('nTot').textContent=total.toLocaleString('fr-FR');
+  $('nIn').textContent=inside.toLocaleString('fr-FR');
+  if(!total){$('est').textContent='–';$('err').textContent=$('errTh').textContent='–';$('digits').textContent='0 décimale correcte';return}
+  const e=4*inside/total,s=e.toFixed(5),ref=PI.toFixed(5);
+  let k=0;while(k<s.length&&s[k]===ref[k])k++;
+  const html=s.replace('.',',');
+  $('est').innerHTML='<span class="ok">'+html.slice(0,k)+'</span><span class="ko">'+html.slice(k)+'</span>';
+  const dec=Math.max(0,k-2);$('digits').textContent=dec+(dec>1?' décimales correctes':' décimale correcte');
+  $('err').textContent=fr(Math.abs(e-PI),4);
+  $('errTh').textContent='± '+fr(4*Math.sqrt((PI/4)*(1-PI/4)/total),4);
+}
+
+function drawBoard(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  ctx.drawImage(layer,0,0);
+  ctx.save();ctx.scale(dpr,dpr);
+  ctx.strokeStyle=tok.ink;ctx.lineWidth=2;
+  ctx.strokeRect(1,1,S-2,S-2);
+  ctx.beginPath();ctx.arc(S/2,S/2,S/2-1,0,2*PI);ctx.stroke();
+  ctx.strokeStyle=tok.line;ctx.lineWidth=1;ctx.beginPath();
+  ctx.moveTo(S/2,0);ctx.lineTo(S/2,S);ctx.moveTo(0,S/2);ctx.lineTo(S,S/2);ctx.stroke();
+  ctx.restore();
+}
+
+function drawChart(){
+  const W=ch.clientWidth,H=ch.clientHeight,L=48,R=14,T=12,B=28;
+  cctx.clearRect(0,0,W,H);
+  const xMax=Math.max(4,Math.ceil(Math.log10(Math.max(total,10))));
+  const yMin=2.6,yMax=3.7;
+  const X=n=>L+Math.log10(n)/xMax*(W-L-R);
+  const Y=v=>T+(yMax-Math.max(yMin,Math.min(yMax,v)))/(yMax-yMin)*(H-T-B);
+  // grille
+  cctx.strokeStyle=tok.line;cctx.lineWidth=1;cctx.fillStyle=tok.muted;cctx.font='11px '+tok.mono;
+  cctx.textAlign='right';cctx.textBaseline='middle';
+  for(let v=2.6;v<=3.71;v+=0.2){cctx.beginPath();cctx.moveTo(L,Y(v));cctx.lineTo(W-R,Y(v));cctx.stroke();cctx.fillText(fr(v,1),L-6,Y(v))}
+  cctx.textAlign='center';cctx.textBaseline='top';
+  for(let k=0;k<=xMax;k++){cctx.beginPath();cctx.moveTo(X(10**k),T);cctx.lineTo(X(10**k),H-B);cctx.stroke();
+    cctx.fillText(k===0?'1':'10'+['⁰','¹','²','³','⁴','⁵','⁶','⁷','⁸','⁹'][k],X(10**k),H-B+6)}
+  // bande 95 %
+  const sd=n=>4*Math.sqrt((PI/4)*(1-PI/4)/n)*1.96;
+  cctx.fillStyle=tok.band;cctx.beginPath();
+  const steps=120;
+  for(let i=0;i<=steps;i++){const n=10**(xMax*i/steps);i?cctx.lineTo(X(n),Y(PI+sd(n))):cctx.moveTo(X(n),Y(PI+sd(n)))}
+  for(let i=steps;i>=0;i--){const n=10**(xMax*i/steps);cctx.lineTo(X(n),Y(PI-sd(n)))}
+  cctx.closePath();cctx.fill();
+  // π
+  cctx.strokeStyle=tok.th;cctx.lineWidth=1.5;cctx.beginPath();cctx.moveTo(L,Y(PI));cctx.lineTo(W-R,Y(PI));cctx.stroke();
+  // estimation
+  if(hist.length){
+    cctx.strokeStyle=tok.ink;cctx.lineWidth=1.8;cctx.beginPath();
+    hist.forEach(([n,v],i)=>i?cctx.lineTo(X(n),Y(v)):cctx.moveTo(X(n),Y(v)));
+    cctx.lineTo(X(total),Y(4*inside/total));cctx.stroke();
+    cctx.fillStyle=tok.ink;cctx.beginPath();cctx.arc(X(total),Y(4*inside/total),3.5,0,2*PI);cctx.fill();
+  }
+  cctx.fillStyle=tok.muted;cctx.textAlign='left';cctx.textBaseline='bottom';cctx.fillText('N',W-R-8,H-B-2);
+}
+
+let last=performance.now(),dirty=true;
+function frame(now){
+  const dt=Math.min(now-last,60);last=now;
+  if(running){acc+=dt*rate/1000;const m=Math.floor(acc);if(m>0){acc-=m;add(m);dirty=true}}
+  if(dirty){updateStats();drawBoard();drawChart();dirty=false}
+  requestAnimationFrame(frame);
+}
+const mark=()=>{dirty=true};
+
+$('rate').addEventListener('input',e=>{rate=Math.round(10**(+e.target.value/25));$('rateOut').textContent=rate.toLocaleString('fr-FR')});
+$('run').addEventListener('click',()=>{running=!running;$('run').setAttribute('aria-pressed',running);$('run').textContent=running?'Pause':'Lancer en continu'});
+$('one').addEventListener('click',()=>{add(1);mark()});
+$('tenk').addEventListener('click',()=>{add(10000);mark()});
+$('million').addEventListener('click',()=>{add(1000000);mark()});
+$('reset').addEventListener('click',()=>{reset();mark()});
+window.addEventListener('resize',()=>{layout();mark()});
+const reTheme=()=>{readTok();redrawLayer();mark()};
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',reTheme);
+new MutationObserver(reTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+if(!running){$('run').setAttribute('aria-pressed','false');$('run').textContent='Lancer en continu'}
+
+layout();
+add(500);
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

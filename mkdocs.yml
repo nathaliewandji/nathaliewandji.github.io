@@ -1,0 +1,137 @@
+# ------------------------------------------------------------------
+#  Réglages du site Nathalie Wandji
+#  C'est le seul fichier à modifier pour changer le nom, les liens
+#  ou les couleurs : toutes les pages se mettent à jour.
+# ------------------------------------------------------------------
+
+site_name: Nathalie Wandji
+site_description: Simulations interactives, Python, tech et e-learning. Des ressources gratuites pour apprendre en manipulant.
+# Remplacez « lucy » par votre nom d'utilisateur GitHub :
+site_url: https://nathaliewandji.github.io/
+
+theme:
+  name: material
+  language: fr
+  logo: assets/logo.svg
+  favicon: assets/logo.svg
+  font:
+    text: IBM Plex Sans
+    code: IBM Plex Mono
+  palette:
+    # Mode clair
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Passer en mode sombre
+    # Mode sombre
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Passer en mode clair
+  features:
+    - navigation.tabs          # les séries en onglets en haut
+    - navigation.indexes       # chaque dossier a sa page d'accueil (index.md)
+    - navigation.top           # bouton « retour en haut »
+    - navigation.footer        # liens « précédent / suivant » en bas des épisodes
+    - search.suggest
+    - search.highlight
+    - content.code.copy        # bouton « copier » sur les blocs de code
+
+plugins:
+  - search
+  # Deux langues : chaque page existe en page.fr.md et page.en.md, côte à côte.
+  # Si la version anglaise manque, la version française s'affiche à la place.
+  - i18n:
+      docs_structure: suffix
+      fallback_to_default: true
+      reconfigure_material: true
+      reconfigure_search: true
+      languages:
+        - locale: fr
+          name: Français
+          default: true
+          build: true
+          nav_translations:
+            Elearning: E-learning
+            Defi 10 minutes: Défi 10 minutes
+            Form 1: 6e · Form 1
+            Form 2: 5e · Form 2
+            Form 3: 4e · Form 3
+            Form 4: 3e · Form 4
+            Form 5: Seconde · Form 5
+            Lower sixth: Première · Lower Sixth
+            Upper sixth: Terminale · Upper Sixth
+            University 1: Université · L1
+            University 2: Université · L2
+            University 3: Université · L3
+        - locale: en
+          name: English
+          build: true
+          site_description: Interactive simulations, Python, tech and e-learning. Free resources to learn by doing.
+          copyright: © 2026 Nathalie Wandji · Free resources for learning
+          nav_translations:
+            Elearning: E-learning
+            Defi 10 minutes: 10-minute challenge
+            Statistiques: Statistics
+            Maternelle: Nursery
+            Primaire: Primary
+            Form 1: Form 1 · 6e
+            Form 2: Form 2 · 5e
+            Form 3: Form 3 · 4e
+            Form 4: Form 4 · 3e
+            Form 5: Form 5 · Seconde
+            Lower sixth: Lower Sixth · Première
+            Upper sixth: Upper Sixth · Terminale
+            University 1: University · Year 1
+            University 2: University · Year 2
+            University 3: University · Year 3
+  # Construit le menu à partir des dossiers. L'ordre se règle dans les fichiers .pages
+  # (doit rester APRÈS i18n)
+  - awesome-pages
+
+# Liens en bas de chaque page.
+# Quand la chaîne YouTube existera, retirez le # devant les 3 lignes ci-dessous
+# et mettez votre adresse.
+extra:
+  generator: false
+  social:
+    - icon: fontawesome/brands/youtube
+     link: https://www.youtube.com/@NathalieDianeWandji
+
+extra_css:
+  - assets/stylesheets/extra.css
+
+copyright: © 2026 Nathalie Wandji · Ressources gratuites pour apprendre
+
+markdown_extensions:
+  - admonition               # encadrés : !!! note, !!! tip, !!! warning
+  - pymdownx.details         # encadrés repliables : ??? note
+  - attr_list
+  - md_in_html               # cartes en grille
+  - def_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.emoji:          # icônes :material-...:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:      # couleurs du code Python
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.tabbed:         # onglets (ex. : énoncé / solution)
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.arithmatex:     # formules de maths : $x^2$
+      generic: true
+
+extra_javascript:
+  - assets/javascripts/mathjax.js
+  - https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js

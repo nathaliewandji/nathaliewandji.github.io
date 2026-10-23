@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Droite graduée zoomable</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout : la droite en pleine largeur comme un tableau, puis deux pupitres côte à côte (placer / défi) */
+:root{
+  --bg:#eef1f4;
+  --surface:#ffffff;
+  --ink:#16202b;
+  --muted:#5b6876;
+  --line:#d3dae2;
+  --tenth:#2f5d8a;
+  --hundredth:#d9822b;
+  --thousandth:#2f8a6a;
+  --flag:#c43d4b;
+  --soft:rgba(47,93,138,.12);
+  --ok:#2f8a4e;
+  --f-display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#10161d;--surface:#18212b;--ink:#e6ebf0;--muted:#97a3b0;--line:#2a3643;
+  --tenth:#6fa3d6;--hundredth:#f0a04b;--thousandth:#5fc49e;--flag:#ff7b86;--soft:rgba(111,163,214,.15);--ok:#6fd08e;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10161d;--surface:#18212b;--ink:#e6ebf0;--muted:#97a3b0;--line:#2a3643;
+  --tenth:#6fa3d6;--hundredth:#f0a04b;--thousandth:#5fc49e;--flag:#ff7b86;--soft:rgba(111,163,214,.15);--ok:#6fd08e;color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 40px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+header{display:flex;flex-direction:column;gap:6px}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--f-display);font-weight:800;font-size:clamp(28px,4.6vw,44px);line-height:1.05;margin:0;text-wrap:balance}
+.lede{margin:0;color:var(--muted);max-width:66ch}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;min-width:0}
+.toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:space-between}
+.zoom{display:flex;gap:8px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:15px;padding:6px 12px;border-radius:999px;background:var(--soft)}
+.chip i{width:10px;height:10px;border-radius:50%;background:var(--ink)}
+.hint{font-size:14px;color:var(--muted);margin:8px 2px 0}
+canvas{display:block;width:100%;height:240px;touch-action:none;cursor:grab;margin-top:6px}
+canvas.dragging{cursor:grabbing}
+.levels{display:flex;flex-wrap:wrap;gap:14px;font-size:14px;color:var(--muted);padding:4px 2px 0}
+.levels span{display:inline-flex;align-items:center;gap:6px}
+.levels b{width:4px;height:16px;border-radius:2px;background:var(--ink)}
+
+button{font:inherit;font-weight:600;font-size:15px;padding:10px 14px;border-radius:10px;border:1px solid var(--line);
+  background:var(--surface);color:var(--ink);cursor:pointer;min-height:44px}
+button:hover{border-color:var(--tenth)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--tenth);outline-offset:2px}
+button.primary{background:var(--tenth);border-color:var(--tenth);color:var(--surface)}
+button.big{font-size:18px;min-width:52px}
+
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px}
+.cols h2{font-family:var(--f-display);font-weight:600;font-size:21px;margin:0 0 4px}
+.cols .sub{margin:0 0 12px;color:var(--muted);font-size:15px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+input[type=text]{font:inherit;font-family:var(--f-mono);font-size:18px;padding:9px 12px;border-radius:10px;border:1px solid var(--line);
+  background:var(--bg);color:var(--ink);width:9em;min-height:44px}
+.pins{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;padding:0;list-style:none}
+.pins li{display:inline-flex;align-items:center;gap:6px;font-family:var(--f-mono);font-size:16px;padding:4px 6px 4px 12px;border-radius:999px;border:1px solid var(--line)}
+.pins button{min-height:0;padding:2px 8px;border:none;font-size:16px;color:var(--muted)}
+.cursor-read{margin-top:14px;font-size:15px;color:var(--muted)}
+.cursor-read strong{font-family:var(--f-mono);font-size:22px;color:var(--ink)}
+
+.question{font-size:19px;font-weight:600;margin:4px 0 12px;min-height:1.5em}
+.question .num{font-family:var(--f-mono);color:var(--flag)}
+.feedback{margin-top:12px;font-size:16px;min-height:1.5em}
+.feedback.good{color:var(--ok);font-weight:600}
+.feedback.bad{color:var(--flag)}
+.score{font-family:var(--f-mono);font-size:14px;color:var(--muted);margin-top:8px}
+
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px;border-top:1px solid var(--line);padding-top:18px}
+.notes h3{font-family:var(--f-display);font-weight:600;font-size:18px;margin:0 0 6px}
+.notes p{margin:0;color:var(--muted);max-width:60ch}
+</style>
+<style>body{margin:0}[hidden]{display:none!important}.site-back{align-self:flex-start;font-size:14px;font-weight:500;color:var(--muted);text-decoration:none}.site-back:hover{color:var(--ink)}</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="site-back" href="index.html">← Retour au niveau</a>
+  <header>
+    <div class="eyebrow">6e · Nombres décimaux</div>
+    <h1>Droite graduée zoomable</h1>
+    <p class="lede">Zoome entre deux nombres entiers : chaque unité se partage en 10 dixièmes, chaque dixième en 10 centièmes, chaque centième en 10 millièmes. Où se trouvent vraiment 3,12 et 3,5 ?</p>
+  </header>
+
+  <div class="card">
+    <div class="toolbar">
+      <div class="zoom">
+        <button class="big" id="zin" aria-label="Zoomer">＋</button>
+        <button class="big" id="zout" aria-label="Dézoomer">−</button>
+        <button id="all">Voir de 0 à 10</button>
+      </div>
+      <div class="chip" id="chip"><i id="chipDot"></i><span id="chipTxt">On voit les dixièmes</span></div>
+    </div>
+    <canvas id="cv" aria-label="Droite graduée de 0 à 10, zoomable"></canvas>
+    <div class="levels">
+      <span><b></b>Unités</span>
+      <span><b style="background:var(--tenth)"></b>Dixièmes</span>
+      <span><b style="background:var(--hundredth)"></b>Centièmes</span>
+      <span><b style="background:var(--thousandth)"></b>Millièmes</span>
+    </div>
+    <p class="hint">Molette, pincement ou boutons ＋ / − pour zoomer. Fais glisser la droite pour te déplacer, et le triangle pour bouger le curseur.</p>
+  </div>
+
+  <div class="cols">
+    <div class="card">
+      <h2>Placer un nombre</h2>
+      <p class="sub">Écris un nombre entre 0 et 10, avec au plus trois chiffres après la virgule.</p>
+      <form class="row" id="addForm">
+        <input type="text" id="addIn" inputmode="decimal" placeholder="ex : 3,07" aria-label="Nombre à placer">
+        <button class="primary" type="submit">Placer</button>
+      </form>
+      <div class="feedback bad" id="addErr"></div>
+      <ul class="pins" id="pins"></ul>
+      <div class="cursor-read">Le curseur ▲ indique <strong id="curVal">3,3</strong></div>
+    </div>
+
+    <div class="card">
+      <h2>Défi</h2>
+      <p class="sub">Deux types de questions : placer un nombre avec le curseur, ou lire le nombre montré par le drapeau.</p>
+      <div class="question" id="q">Clique sur « Nouveau défi » pour commencer.</div>
+      <form class="row" id="ansForm">
+        <input type="text" id="ansIn" inputmode="decimal" placeholder="ta réponse" aria-label="Ta réponse" hidden>
+        <button class="primary" type="submit" id="check" hidden>Vérifier</button>
+        <button type="button" id="next">Nouveau défi</button>
+      </form>
+      <div class="feedback" id="fb"></div>
+      <div class="score" id="score">Score : 0 / 0</div>
+    </div>
+  </div>
+
+  <section class="notes">
+    <div>
+      <h3>Le piège 3,12 et 3,5</h3>
+      <p>Beaucoup d'élèves pensent que 3,12 est plus grand que 3,5, parce que 12 est plus grand que 5. Sur la droite, 3,5 est au milieu entre 3 et 4, alors que 3,12 est tout près de 3.</p>
+    </div>
+    <div>
+      <h3>Pourquoi zoomer</h3>
+      <p>Entre deux graduations, il y a toujours de la place pour d'autres nombres. Zoomer montre qu'on peut toujours partager en 10 : c'est le sens des chiffres après la virgule.</p>
+    </div>
+    <div>
+      <h3>Lire une position</h3>
+      <p>On repère d'abord l'unité (entre 3 et 4), puis le dixième (entre 3,1 et 3,2), puis le centième. Chaque zoom ajoute un chiffre après la virgule.</p>
+    </div>
+  </section>
+</div>
+
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const cv=$('cv'),ctx=cv.getContext('2d');
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const MINV=0,MAXV=10,SMIN=28,SMAX=120000;
+const NAMES=['unités','dixièmes','centièmes','millièmes'];
+
+let W=0,H=0,dpr=1,c=3.5,s=500,target=null,T={};
+let pins=[{v:3.12,lvl:2},{v:3.5,lvl:1}];
+let cursor=3.3,flag=null;
+let quiz=null,score=0,asked=0;
+
+const fmt=(v,d)=>{let t=v.toFixed(d);if(t.includes('.'))t=t.replace(/0+$/,'').replace(/\.$/,'');return t.replace('.',',')};
+const decimals=v=>{for(let d=0;d<=3;d++)if(Math.abs(v*10**d-Math.round(v*10**d))<1e-7)return d;return 3};
+const X=v=>W/2+(v-c)*s, V=x=>c+(x-W/2)/s;
+
+function readTok(){const cs=getComputedStyle(document.documentElement);const g=v=>cs.getPropertyValue(v).trim();
+  T={surface:g('--surface'),ink:g('--ink'),muted:g('--muted'),line:g('--line'),soft:g('--soft'),flag:g('--flag'),
+     lv:[g('--ink'),g('--tenth'),g('--hundredth'),g('--thousandth')],mono:g('--f-mono'),body:g('--f-body')}}
+
+function clampView(){s=Math.min(SMAX,Math.max(SMIN,s));c=Math.min(MAXV+0.3,Math.max(MINV-0.3,c))}
+function layout(){readTok();dpr=window.devicePixelRatio||1;W=cv.clientWidth;H=cv.clientHeight;cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0)}
+
+function visibleLevel(){let L=0;for(let k=1;k<=3;k++)if(s*10**-k>=8)L=k;return L}
+function snapStep(){return 10**-visibleLevel()}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  const y=H*0.52;
+  const vmin=Math.max(MINV,V(0)),vmax=Math.min(MAXV,V(W));
+  // ligne
+  ctx.strokeStyle=T.ink;ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(Math.max(0,X(MINV)),y);ctx.lineTo(Math.min(W,X(MAXV)),y);ctx.stroke();
+  // niveau des étiquettes
+  const need=[26,44,52,62];let labL=0;for(let k=0;k<=3;k++)if(s*10**-k>=need[k])labL=k;
+  const hTick=[30,22,15,9];
+  for(let k=3;k>=0;k--){
+    const step=10**-k,sp=s*step;if(sp<5)continue;
+    const a=Math.ceil(vmin/step-1e-9),b=Math.floor(vmax/step+1e-9);
+    for(let i=a;i<=b;i++){
+      const v=i*step;let own=k;for(let j=0;j<k;j++)if(Math.abs(v*10**j-Math.round(v*10**j))<1e-7){own=j;break}
+      if(own!==k)continue;
+      const x=X(v),h=hTick[k];
+      ctx.strokeStyle=T.lv[k];ctx.lineWidth=k===0?2.5:k===1?2:1.5;
+      ctx.beginPath();ctx.moveTo(x,y-h/2);ctx.lineTo(x,y+h/2);ctx.stroke();
+      if(k<=labL){
+        ctx.fillStyle=T.lv[k];ctx.textAlign='center';ctx.textBaseline='top';
+        ctx.font=(k===0?'600 18px ':k===labL?'500 14px ':'600 15px ')+T.mono;
+        ctx.fillText(fmt(v,k),x,y+hTick[0]/2+6);
+      }
+    }
+  }
+  // repères
+  pins.forEach(p=>drawPin(p.v,T.lv[Math.max(1,p.lvl)]||T.ink,fmt(p.v,3),y,false));
+  if(flag!==null)drawPin(flag,T.flag,'?',y,true);
+  // curseur
+  const cx=X(cursor);
+  if(cx>-20&&cx<W+20){
+    ctx.fillStyle=T.ink;ctx.beginPath();ctx.moveTo(cx,y+hTick[0]/2+30);ctx.lineTo(cx-13,y+hTick[0]/2+52);ctx.lineTo(cx+13,y+hTick[0]/2+52);ctx.closePath();ctx.fill();
+    ctx.strokeStyle=T.ink;ctx.lineWidth=1.5;ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(cx,y);ctx.lineTo(cx,y+hTick[0]/2+30);ctx.stroke();ctx.setLineDash([]);
+  }else{
+    edgeArrow(cx<0?'left':'right',y+60,T.ink,'▲ '+fmt(cursor,3));
+  }
+}
+function drawPin(v,col,label,y,isFlag){
+  const x=X(v);
+  if(x<-4||x>W+4){edgeArrow(x<0?'left':'right',y-70+(isFlag?-26:0)+(pins.indexOf&&0),col,label);return}
+  const top=y-74;
+  ctx.strokeStyle=col;ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x,top);ctx.stroke();
+  if(isFlag){ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(x,top);ctx.lineTo(x+30,top+11);ctx.lineTo(x,top+22);ctx.closePath();ctx.fill();
+    ctx.fillStyle=T.surface;ctx.font='700 14px '+T.body;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('?',x+10,top+11);return}
+  ctx.fillStyle=col;ctx.beginPath();ctx.arc(x,y,5,0,7);ctx.fill();
+  ctx.font='600 17px '+T.mono;const tw=ctx.measureText(label).width+16;
+  let bx=Math.min(W-tw-2,Math.max(2,x-tw/2));
+  ctx.fillStyle=col;roundRect(bx,top-28,tw,28,8);ctx.fill();
+  ctx.fillStyle=T.surface;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(label,bx+tw/2,top-14);
+}
+function edgeArrow(side,y,col,label){
+  ctx.font='600 14px '+T.mono;const tw=ctx.measureText(label).width;
+  const pad=8,w=tw+30,x=side==='left'?4:W-w-4;
+  ctx.fillStyle=T.soft;roundRect(x,y-14,w,28,8);ctx.fill();
+  ctx.fillStyle=col;ctx.textBaseline='middle';
+  if(side==='left'){ctx.textAlign='left';ctx.fillText('◀ '+label,x+pad,y)}else{ctx.textAlign='right';ctx.fillText(label+' ▶',x+w-pad,y)}
+}
+function roundRect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+
+function updateUI(){
+  const L=visibleLevel();
+  $('chipTxt').textContent=L===0?'On voit les unités':'On voit les '+NAMES[L]+' : chaque '+(['unité','dixième','centième'][L-1])+' est coupé'+(L===1?'e':'')+' en 10';
+  $('chipDot').style.background=T.lv[L];
+  $('curVal').textContent=fmt(cursor,3);
+}
+
+// animation
+function goTo(nc,ns){if(reduce){c=nc;s=ns;clampView();return}target={c:nc,s:ns}}
+function zoomAt(px,f){const v=V(px);s*=f;clampView();c=v-(px-W/2)/s;clampView()}
+$('zin').onclick=()=>goTo(c,Math.min(SMAX,s*10));
+$('zout').onclick=()=>goTo(c,Math.max(SMIN,s/10));
+$('all').onclick=()=>goTo(5,Math.max(SMIN,W/10.6));
+
+// pointeurs
+const ptrs=new Map();let mode=null,lastPinch=null,lastX=0;
+const yLine=()=>H*0.52;
+cv.addEventListener('pointerdown',e=>{
+  cv.setPointerCapture(e.pointerId);const r=cv.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
+  ptrs.set(e.pointerId,{x,y});target=null;
+  if(ptrs.size===1){mode=(Math.abs(x-X(cursor))<26&&y>yLine()+20)?'cursor':'pan';lastX=x;cv.classList.add('dragging')}
+  else{mode='pinch';lastPinch=null}
+});
+cv.addEventListener('pointermove',e=>{
+  if(!ptrs.has(e.pointerId))return;const r=cv.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
+  ptrs.set(e.pointerId,{x,y});
+  if(mode==='pan'){c-=(x-lastX)/s;clampView();lastX=x}
+  else if(mode==='cursor'){const st=snapStep();cursor=Math.min(MAXV,Math.max(MINV,Math.round(V(x)/st)*st));cursor=+cursor.toFixed(3)}
+  else if(mode==='pinch'&&ptrs.size>=2){const [a,b]=[...ptrs.values()];const d=Math.hypot(a.x-b.x,a.y-b.y),m=(a.x+b.x)/2;
+    if(lastPinch){zoomAt(m,d/lastPinch.d);c-=(m-lastPinch.m)/s;clampView()}lastPinch={d,m}}
+});
+const up=e=>{ptrs.delete(e.pointerId);if(ptrs.size===0){mode=null;cv.classList.remove('dragging')}else if(ptrs.size===1){mode='pan';lastX=[...ptrs.values()][0].x}};
+cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+cv.addEventListener('wheel',e=>{e.preventDefault();target=null;const r=cv.getBoundingClientRect();zoomAt(e.clientX-r.left,Math.exp(-e.deltaY*0.0018))},{passive:false});
+
+// placer
+function parseNum(t){t=t.trim().replace(/\s/g,'').replace(',','.');if(!/^\d+(\.\d+)?$/.test(t))return null;return +t}
+function renderPins(){
+  const ul=$('pins');ul.innerHTML='';
+  pins.forEach((p,i)=>{const li=document.createElement('li');li.style.borderColor=T.lv[Math.max(1,p.lvl)];
+    li.innerHTML='<span>'+fmt(p.v,3)+'</span>';const b=document.createElement('button');b.type='button';b.textContent='×';b.setAttribute('aria-label','Retirer '+fmt(p.v,3));
+    b.onclick=()=>{pins.splice(i,1);renderPins()};li.appendChild(b);ul.appendChild(li)});
+}
+function fitFor(v){const d=decimals(v);return Math.min(SMAX,Math.max(SMIN,55*10**d))}
+$('addForm').addEventListener('submit',e=>{e.preventDefault();const v=parseNum($('addIn').value);
+  if(v===null||v<MINV||v>MAXV){$('addErr').textContent='Écris un nombre entre 0 et 10, par exemple 4,25.';return}
+  if(decimals(v)>3||Math.abs(v-+v.toFixed(3))>1e-9){$('addErr').textContent='Garde au plus trois chiffres après la virgule.';return}
+  $('addErr').textContent='';pins.push({v,lvl:decimals(v)});renderPins();goTo(v,fitFor(v));$('addIn').value=''});
+
+// défi
+function randNum(){const d=Math.random()<0.4?1:2;const u=Math.floor(Math.random()*10);let f;
+  do{f=Math.floor(Math.random()*10**d)}while(d===2&&f%10===0||f===0);return +(u+f/10**d).toFixed(d)}
+function newQuiz(){
+  const kind=asked%2===0?'place':'read';const v=randNum();quiz={kind,v,done:false};$('fb').textContent='';$('fb').className='feedback';
+  if(kind==='place'){flag=null;$('q').innerHTML='Place le nombre <span class="num">'+fmt(v,3)+'</span> avec le curseur ▲.';
+    $('ansIn').hidden=true;$('check').hidden=false;cursor=Math.floor(v)+0.5>MAXV?5:Math.round(Math.random()*9);goTo(5,Math.max(SMIN,W/10.6))}
+  else{flag=v;$('q').innerHTML='Quel nombre indique le drapeau <span class="num">?</span>';
+    $('ansIn').hidden=false;$('ansIn').value='';$('check').hidden=false;const sc=fitFor(v);goTo(v+(Math.random()-0.5)*W*0.4/sc,sc)}
+  updateUI();
+}
+function answer(ok,msg){$('fb').textContent=msg;$('fb').className='feedback '+(ok?'good':'bad');if(!quiz.done){asked++;if(ok)score++;quiz.done=true}
+  $('score').textContent='Score : '+score+' / '+asked;if(ok&&quiz.kind==='read')flag=null}
+$('ansForm').addEventListener('submit',e=>{e.preventDefault();if(!quiz)return;
+  const v=quiz.v,d=decimals(v);
+  if(quiz.kind==='place'){
+    const diff=cursor-v;
+    if(Math.abs(diff)<1e-7){answer(true,'Bravo, le curseur est exactement sur '+fmt(v,3)+'.');pins.push({v,lvl:d});renderPins()}
+    else if(visibleLevel()<d&&Math.abs(diff)<10**-(d-1)){answer(false,'Presque ! Zoome pour voir les '+NAMES[d]+', puis ajuste le curseur.')}
+    else answer(false,'Pas encore : ton curseur est sur '+fmt(cursor,3)+', c\'est '+(diff>0?'plus grand':'plus petit')+' que '+fmt(v,3)+'.');
+  }else{
+    const a=parseNum($('ansIn').value);
+    if(a===null){$('fb').textContent='Écris un nombre, par exemple 6,4.';$('fb').className='feedback bad';return}
+    if(Math.abs(a-v)<1e-7)answer(true,'Bravo, c\'est bien '+fmt(v,3)+'.');
+    else{const lo=Math.floor(v*10)/10;answer(false,'Pas tout à fait. Indice : le drapeau est entre '+fmt(lo,1)+' et '+fmt(lo+0.1,1)+'. Corrige et vérifie à nouveau.')}
+  }
+});
+$('next').addEventListener('click',newQuiz);
+
+// boucle
+function frame(){
+  if(target){const ls=Math.log(s),lt=Math.log(target.s);
+    s=Math.exp(ls+(lt-ls)*0.18);c+=(target.c-c)*0.18;clampView();
+    if(Math.abs(lt-ls)<0.003&&Math.abs(target.c-c)<1e-5/1){s=target.s;c=target.c;target=null}}
+  draw();updateUI();requestAnimationFrame(frame);
+}
+const reTheme=()=>{readTok();renderPins()};
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',reTheme);
+new MutationObserver(reTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+window.addEventListener('resize',layout);
+
+layout();s=Math.max(SMIN,W/1.25);c=3.5;clampView();renderPins();requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

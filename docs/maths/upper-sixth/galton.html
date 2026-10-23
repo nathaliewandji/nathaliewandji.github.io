@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Planche de Galton</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout : plateau de jeu à gauche, pupitre de commande à droite ; empilé sur téléphone */
+:root{
+  --bg:#eef1f4;
+  --surface:#ffffff;
+  --ink:#16202b;
+  --muted:#5b6876;
+  --line:#d3dae2;
+  --peg:#7a8796;
+  --ball:#d9822b;
+  --bar:#2f5d8a;
+  --bar-soft:rgba(47,93,138,.16);
+  --theory:#c43d4b;
+  --f-display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#10161d;--surface:#18212b;--ink:#e6ebf0;--muted:#97a3b0;--line:#2a3643;--peg:#6d7c8c;
+  --ball:#f0a04b;--bar:#6fa3d6;--bar-soft:rgba(111,163,214,.18);--theory:#ff7b86;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10161d;--surface:#18212b;--ink:#e6ebf0;--muted:#97a3b0;--line:#2a3643;--peg:#6d7c8c;
+  --ball:#f0a04b;--bar:#6fa3d6;--bar-soft:rgba(111,163,214,.18);--theory:#ff7b86;color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 40px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+header{display:flex;flex-direction:column;gap:6px}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--f-display);font-weight:800;font-size:clamp(28px,4.6vw,44px);line-height:1.05;margin:0;text-wrap:balance}
+.lede{margin:0;color:var(--muted);max-width:64ch}
+
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}}
+
+.board{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;min-width:0}
+canvas{display:block;width:100%;height:auto}
+.legend{display:flex;flex-wrap:wrap;gap:16px;padding:8px 6px 2px;font-size:13px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.sw{width:14px;height:10px;border-radius:2px;background:var(--bar)}
+.sw.t{height:0;border-top:2px solid var(--theory);background:none}
+.sw.n{height:0;border-top:2px dashed var(--muted);background:none}
+
+.panel{display:flex;flex-direction:column;gap:18px}
+.group{display:flex;flex-direction:column;gap:12px}
+.group h2{font-family:var(--f-mono);font-size:12px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0}
+.ctl{display:flex;flex-direction:column;gap:4px}
+.ctl label{display:flex;justify-content:space-between;font-weight:500;font-size:14px}
+.ctl output{font-family:var(--f-mono);font-variant-numeric:tabular-nums;color:var(--bar)}
+input[type=range]{width:100%;accent-color:var(--bar)}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+button{font:inherit;font-weight:600;font-size:14px;padding:9px 10px;border-radius:9px;border:1px solid var(--line);
+  background:var(--surface);color:var(--ink);cursor:pointer}
+button:hover{border-color:var(--bar)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--bar);outline-offset:2px}
+button.primary{background:var(--bar);border-color:var(--bar);color:var(--surface)}
+button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--surface)}
+.toggle{display:flex;align-items:center;gap:8px;font-size:14px}
+
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:right;padding:6px 4px;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+th{font-weight:500;color:var(--muted);font-size:12px}
+td{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+td:first-child{font-family:var(--f-body)}
+.big{font-family:var(--f-display);font-weight:800;font-size:30px;line-height:1;font-variant-numeric:tabular-nums}
+.big small{font-family:var(--f-body);font-weight:400;font-size:13px;color:var(--muted);margin-left:6px}
+
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px;border-top:1px solid var(--line);padding-top:18px}
+.notes h3{font-family:var(--f-display);font-weight:600;font-size:18px;margin:0 0 6px}
+.notes p{margin:0;color:var(--muted);max-width:60ch}
+.formula{font-family:var(--f-mono);font-size:14px;color:var(--ink);background:var(--bar-soft);padding:6px 10px;border-radius:6px;display:inline-block;margin-top:8px;overflow-x:auto;max-width:100%}
+</style>
+<style>body{margin:0}[hidden]{display:none!important}.site-back{align-self:flex-start;font-size:14px;font-weight:500;color:var(--muted);text-decoration:none}.site-back:hover{color:var(--ink)}</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="site-back" href="index.html">← Retour au niveau</a>
+  <header>
+    <div class="eyebrow">Probabilités · Loi binomiale</div>
+    <h1>Planche de Galton</h1>
+    <p class="lede">Chaque bille rebondit sur <span id="nTxt">12</span> rangées de clous et part à droite avec la probabilité p. Le nombre de rebonds à droite donne la case d'arrivée. Avec beaucoup de billes, l'histogramme épouse la loi binomiale, puis la courbe en cloche.</p>
+  </header>
+
+  <div class="grid">
+    <div class="board">
+      <canvas id="cv" aria-label="Planche de Galton animée avec histogramme des arrivées"></canvas>
+      <div class="legend">
+        <span><i class="sw"></i>Billes observées</span>
+        <span><i class="sw t"></i>Loi binomiale B(n, p)</span>
+        <span><i class="sw n"></i>Approximation normale</span>
+      </div>
+    </div>
+
+    <aside class="panel">
+      <div class="group">
+        <h2>Paramètres</h2>
+        <div class="ctl"><label for="n">Rangées de clous n <output id="nOut">12</output></label>
+          <input id="n" type="range" min="2" max="20" step="1" value="12"></div>
+        <div class="ctl"><label for="p">Probabilité d'aller à droite p <output id="pOut">0,50</output></label>
+          <input id="p" type="range" min="0.05" max="0.95" step="0.05" value="0.5"></div>
+        <div class="ctl"><label for="rate">Débit (billes/s) <output id="rateOut">15</output></label>
+          <input id="rate" type="range" min="1" max="60" step="1" value="15"></div>
+      </div>
+
+      <div class="group">
+        <h2>Lancer</h2>
+        <div class="btns">
+          <button id="run" aria-pressed="true">Pause</button>
+          <button id="one">+1 bille</button>
+          <button id="hundred">+100 animées</button>
+          <button id="thousand" class="primary">+1000 instantané</button>
+        </div>
+        <button id="reset">Vider la planche</button>
+        <label class="toggle"><input id="normal" type="checkbox" checked> Afficher la courbe normale</label>
+      </div>
+
+      <div class="group">
+        <h2>Résultats</h2>
+        <div class="big" id="count">0<small>billes</small></div>
+        <table>
+          <thead><tr><th></th><th>Observé</th><th>Théorie</th></tr></thead>
+          <tbody>
+            <tr><td>Moyenne</td><td id="mObs">–</td><td id="mTh">–</td></tr>
+            <tr><td>Écart-type</td><td id="sObs">–</td><td id="sTh">–</td></tr>
+            <tr><td>Case la plus remplie</td><td id="modeObs">–</td><td id="modeTh">–</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </aside>
+  </div>
+
+  <section class="notes">
+    <div>
+      <h3>Ce qu'il faut observer</h3>
+      <p>Avec 20 billes, l'histogramme est irrégulier. Avec 2000, il colle à la courbe rouge. C'est la loi des grands nombres : les fréquences observées se rapprochent des probabilités.</p>
+    </div>
+    <div>
+      <h3>Pourquoi cette forme</h3>
+      <p>Pour arriver dans la case k, il faut k rebonds à droite parmi n. Il existe C(n, k) chemins différents, et chacun a la même probabilité.</p>
+      <span class="formula">P(X = k) = C(n,k) · p<sup>k</sup> · (1−p)<sup>n−k</sup></span>
+    </div>
+    <div>
+      <h3>À essayer</h3>
+      <p>Passez p à 0,2 : la cloche se décale et devient asymétrique. Montez n à 20 : la courbe normale de moyenne np et d'écart-type √(np(1−p)) devient presque parfaite.</p>
+    </div>
+  </section>
+</div>
+
+<script>
+(()=>{
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const $=id=>document.getElementById(id);
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const fmt=(x,d=2)=>x.toLocaleString('fr-FR',{minimumFractionDigits:d,maximumFractionDigits:d});
+
+let n=12,p=0.5,rate=15,running=!reduce,showNormal=true;
+let bins=[],total=0,balls=[],queue=0,acc=0,W=0,H=0,G={};
+const HOP=95; // ms par rangée
+
+function binom(n,k){let r=1;for(let i=1;i<=k;i++)r=r*(n-k+i)/i;return r}
+function pmf(k){return binom(n,k)*Math.pow(p,k)*Math.pow(1-p,n-k)}
+
+function layout(){
+  const w=cv.parentElement.clientWidth-24;
+  W=Math.max(260,w);H=Math.round(Math.min(W*1.0,680));
+  const dpr=window.devicePixelRatio||1;
+  cv.width=W*dpr;cv.height=H*dpr;cv.style.height=H+'px';
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const top=26,boardH=H*0.5;
+  const dy=boardH/n;
+  const dx=Math.min(dy*1.25,(W-24)/(n+1));
+  const binTop=top+n*dy+8,binBottom=H-24;
+  G={top,dy,dx,cx:W/2,binTop,binBottom,r:Math.max(2.2,Math.min(dx*0.17,5.5))};
+}
+const pegX=(r,j)=>G.cx+(j-r/2)*G.dx;
+const pegY=r=>G.top+r*G.dy;
+const binX=k=>G.cx+(k-n/2)*G.dx;
+
+function reset(){bins=new Array(n+1).fill(0);total=0;balls=[];queue=0;updateStats()}
+function sample(){let c=0;for(let i=0;i<n;i++)if(Math.random()<p)c++;return c}
+function addInstant(m){for(let i=0;i<m;i++){bins[sample()]++;total++}updateStats()}
+function spawn(){
+  const path=[0];let c=0;for(let i=0;i<n;i++){if(Math.random()<p)c++;path.push(c)}
+  balls.push({path,t:0});
+}
+
+function updateStats(){
+  $('count').innerHTML=total.toLocaleString('fr-FR')+'<small>billes</small>';
+  const mTh=n*p,sTh=Math.sqrt(n*p*(1-p));
+  $('mTh').textContent=fmt(mTh);$('sTh').textContent=fmt(sTh);
+  let best=0;for(let k=1;k<=n;k++)if(pmf(k)>pmf(best))best=k;$('modeTh').textContent=best;
+  if(!total){$('mObs').textContent=$('sObs').textContent=$('modeObs').textContent='–';return}
+  let s=0,s2=0,mk=0;bins.forEach((v,k)=>{s+=v*k;s2+=v*k*k;if(v>bins[mk])mk=k});
+  const m=s/total;$('mObs').textContent=fmt(m);
+  $('sObs').textContent=fmt(Math.sqrt(Math.max(0,s2/total-m*m)));$('modeObs').textContent=mk;
+}
+
+function tok(){const cs=getComputedStyle(document.documentElement);const g=v=>cs.getPropertyValue(v).trim();
+  return{surface:g('--surface'),ink:g('--ink'),muted:g('--muted'),line:g('--line'),peg:g('--peg'),ball:g('--ball'),bar:g('--bar'),soft:g('--bar-soft'),th:g('--theory'),mono:g('--f-mono')}}
+
+function draw(){
+  const T=tok();
+  ctx.clearRect(0,0,W,H);
+  // clous
+  ctx.fillStyle=T.peg;
+  const pr=Math.max(1.6,G.r*0.55);
+  for(let r=0;r<n;r++)for(let j=0;j<=r;j++){ctx.beginPath();ctx.arc(pegX(r,j),pegY(r)+G.r+pr,pr,0,7);ctx.fill()}
+  // entonnoir
+  ctx.strokeStyle=T.line;ctx.lineWidth=1.5;ctx.beginPath();
+  ctx.moveTo(G.cx-G.dx*1.2,2);ctx.lineTo(G.cx-G.r*1.6,G.top-6);ctx.moveTo(G.cx+G.dx*1.2,2);ctx.lineTo(G.cx+G.r*1.6,G.top-6);ctx.stroke();
+  // histogramme
+  const hMax=G.binBottom-G.binTop-14;
+  let maxE=0;for(let k=0;k<=n;k++)maxE=Math.max(maxE,pmf(k));
+  const maxC=Math.max(...bins);
+  const scale=Math.max(maxC,maxE*total,1)*1.08;
+  const bw=G.dx*0.82;
+  // cloisons
+  ctx.strokeStyle=T.line;ctx.lineWidth=1;ctx.beginPath();
+  for(let k=0;k<=n+1;k++){const x=binX(k)-G.dx/2;ctx.moveTo(x,G.binTop);ctx.lineTo(x,G.binBottom)}
+  ctx.moveTo(binX(0)-G.dx/2,G.binBottom);ctx.lineTo(binX(n)+G.dx/2,G.binBottom);ctx.stroke();
+  ctx.fillStyle=T.bar;
+  for(let k=0;k<=n;k++){const h=bins[k]/scale*hMax;if(h>0)ctx.fillRect(binX(k)-bw/2,G.binBottom-h,bw,h)}
+  if(total>0){
+    // normale
+    if(showNormal&&p>0&&p<1){
+      const mu=n*p,sg=Math.sqrt(n*p*(1-p));
+      ctx.strokeStyle=T.muted;ctx.setLineDash([5,4]);ctx.lineWidth=1.5;ctx.beginPath();
+      const steps=160;for(let i=0;i<=steps;i++){const x=-0.5+(n+1)*i/steps;
+        const y=total*Math.exp(-((x-mu)**2)/(2*sg*sg))/(sg*Math.sqrt(2*Math.PI));
+        const X=binX(x),Y=G.binBottom-Math.min(y/scale*hMax,hMax+10);i?ctx.lineTo(X,Y):ctx.moveTo(X,Y)}
+      ctx.stroke();ctx.setLineDash([]);
+    }
+    // binomiale
+    ctx.strokeStyle=T.th;ctx.fillStyle=T.th;ctx.lineWidth=2;ctx.beginPath();
+    for(let k=0;k<=n;k++){const X=binX(k),Y=G.binBottom-pmf(k)*total/scale*hMax;k?ctx.lineTo(X,Y):ctx.moveTo(X,Y)}
+    ctx.stroke();
+    for(let k=0;k<=n;k++){ctx.beginPath();ctx.arc(binX(k),G.binBottom-pmf(k)*total/scale*hMax,3,0,7);ctx.fill()}
+  }
+  // étiquettes
+  ctx.fillStyle=T.muted;ctx.font='11px '+T.mono;ctx.textAlign='center';ctx.textBaseline='top';
+  const every=G.dx<16?2:1;
+  for(let k=0;k<=n;k+=every)ctx.fillText(k,binX(k),G.binBottom+6);
+  // billes
+  ctx.fillStyle=T.ball;
+  for(const b of balls){const pos=ballPos(b);ctx.beginPath();ctx.arc(pos.x,pos.y,G.r,0,7);ctx.fill()}
+}
+
+function ballPos(b){
+  // étape s : 0 = entrée, 1..n = au-dessus des clous rangée s-1, n+1 = case
+  const s=Math.floor(b.t),f=b.t-s;
+  const pt=i=>{
+    if(i<=0)return{x:G.cx,y:G.top-G.dy*0.9};
+    if(i<=n)return{x:pegX(i-1,b.path[i-1]),y:pegY(i-1)};
+    return{x:binX(b.path[n]),y:G.binTop+4};
+  };
+  const a=pt(s),c=pt(s+1);
+  const e=f*f*(3-2*f);
+  return{x:a.x+(c.x-a.x)*e,y:a.y+(c.y-a.y)*f*f-Math.sin(Math.PI*f)*G.dy*0.25*(s>0&&s<=n?1:0)};
+}
+
+let last=performance.now();
+function frame(now){
+  const dt=Math.min(now-last,60);last=now;
+  if(running){acc+=dt*rate/1000;while(acc>=1){acc-=1;if(balls.length<500)spawn()}}
+  while(queue>0&&balls.length<500&&Math.random()<0.5){spawn();queue--}
+  for(const b of balls)b.t+=dt/HOP;
+  let changed=false;
+  balls=balls.filter(b=>{if(b.t>=n+1){bins[b.path[n]]++;total++;changed=true;return false}return true});
+  if(changed)updateStats();
+  draw();requestAnimationFrame(frame);
+}
+
+function setParams(){
+  n=+$('n').value;p=+$('p').value;
+  $('nOut').textContent=n;$('nTxt').textContent=n;$('pOut').textContent=fmt(p);
+  layout();reset();addInstant(300);
+}
+$('n').addEventListener('input',setParams);
+$('p').addEventListener('input',setParams);
+$('rate').addEventListener('input',e=>{rate=+e.target.value;$('rateOut').textContent=rate});
+$('run').addEventListener('click',()=>{running=!running;$('run').setAttribute('aria-pressed',running);$('run').textContent=running?'Pause':'Lancer en continu'});
+$('one').addEventListener('click',()=>reduce?addInstant(1):spawn());
+$('hundred').addEventListener('click',()=>reduce?addInstant(100):queue+=100);
+$('thousand').addEventListener('click',()=>addInstant(1000));
+$('reset').addEventListener('click',reset);
+$('normal').addEventListener('change',e=>showNormal=e.target.checked);
+window.addEventListener('resize',()=>layout());
+if(!running){$('run').setAttribute('aria-pressed','false');$('run').textContent='Lancer en continu'}
+
+setParams();
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

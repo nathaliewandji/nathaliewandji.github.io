@@ -1,0 +1,35 @@
+/* Couleurs de Nit Weird (les mêmes que dans les simulations) */
+:root{
+  --md-primary-fg-color:#2f5d8a;
+  --md-primary-fg-color--light:#4a7aa8;
+  --md-primary-fg-color--dark:#22476b;
+  --md-accent-fg-color:#d9822b;
+  --nw-soon:#5b6876;
+}
+[data-md-color-scheme="slate"]{
+  --md-primary-fg-color:#1f3550;
+  --md-primary-fg-color--light:#2f5d8a;
+  --md-primary-fg-color--dark:#162638;
+  --md-accent-fg-color:#f0a04b;
+  --md-typeset-a-color:#8dbbe6;
+  --nw-soon:#97a3b0;
+}
+
+/* Titre de la page d'accueil */
+.md-typeset .nw-hero h1{font-weight:800;font-size:2.6rem;line-height:1.05;letter-spacing:-.015em;margin-bottom:.4em}
+.md-typeset .nw-hero p{font-size:1.05rem;max-width:40em}
+.md-typeset .nw-eyebrow{font-family:var(--md-code-font-family);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--nw-soon);margin:0}
+@media screen and (max-width:44.9375em){.md-typeset .nw-hero h1{font-size:2rem}}
+
+/* Cartes : un peu plus d'air et un survol visible */
+.md-typeset .grid.cards > ul > li{border-radius:.6rem}
+.md-typeset .grid.cards .lg{font-size:1.6em;color:var(--md-primary-fg-color--light)}
+[data-md-color-scheme="slate"] .md-typeset .grid.cards .lg{color:#8dbbe6}
+
+/* Étiquette « Bientôt » */
+.md-typeset .bientot{display:inline-block;font-size:.65rem;font-weight:700;letter-spacing:.03em;padding:.05em .6em;border-radius:1em;
+  border:1px solid currentColor;color:var(--nw-soon);vertical-align:middle;margin-left:.3em}
+
+/* Titres de page plus lisibles */
+.md-typeset h1{color:var(--md-default-fg-color);font-weight:700;letter-spacing:-.01em}
+.md-typeset .nw-hero h1{color:var(--md-default-fg-color)}

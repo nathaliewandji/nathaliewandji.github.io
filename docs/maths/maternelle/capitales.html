@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Capitales au doigt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=Playwrite+FR+Moderne:wght@400&display=swap">
+<style>
+/* Layout : une grande ardoise lignée au centre, trois gros boutons-icônes dessous, puis les familles de lettres */
+:root{
+  --bg:#eef1f4;
+  --surface:#ffffff;
+  --ink:#16202b;
+  --muted:#5b6876;
+  --line:#d3dae2;
+  --band:#fdf3e4;
+  --model:#dfe4ea;
+  --trace:#d9822b;
+  --start:#2f8a4e;
+  --guide:#2f5d8a;
+  --star:#e6b325;
+  --f-display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+  --f-script:"Playwrite FR Moderne","Comic Sans MS",cursive;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#10161d;--surface:#18212b;--ink:#e6ebf0;--muted:#97a3b0;--line:#2f3c4a;--band:#272219;--model:#34404d;
+  --trace:#f0a04b;--start:#6fd08e;--guide:#6fa3d6;--star:#f2c94c;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10161d;--surface:#18212b;--ink:#e6ebf0;--muted:#97a3b0;--line:#2f3c4a;--band:#272219;--model:#34404d;
+  --trace:#f0a04b;--start:#6fd08e;--guide:#6fa3d6;--star:#f2c94c;color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:1000px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+header{display:flex;flex-direction:column;gap:4px}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:500}
+h1{font-family:var(--f-display);font-weight:800;font-size:clamp(26px,4.2vw,40px);line-height:1.05;margin:0}
+.lede{margin:0;color:var(--muted);max-width:66ch;font-size:15px}
+
+.slate{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:10px;overflow:hidden}
+svg#board{display:block;width:100%;height:min(52vh,460px);touch-action:none;user-select:none;-webkit-user-select:none}
+.model{fill:none;stroke:var(--model);stroke-linecap:round;stroke-linejoin:round}
+.done{fill:none;stroke:var(--trace);stroke-linecap:round;stroke-linejoin:round}
+.demo{fill:none;stroke:var(--guide);stroke-linecap:round;stroke-linejoin:round}
+.arrow{fill:var(--surface)}
+.startdot{fill:var(--start)}
+.startring{fill:none;stroke:var(--start);stroke-width:4}
+@keyframes pulse{0%{r:20;opacity:.9}100%{r:44;opacity:0}}
+.startring{animation:pulse 1.4s ease-out infinite}
+.startring.urge{animation-duration:.6s}
+@media (prefers-reduced-motion:reduce){.startring{animation:none;opacity:.6}}
+
+.party{position:absolute;inset:0;pointer-events:none;display:flex;align-items:center;justify-content:center}
+.party .bravo{font-family:var(--f-display);font-weight:800;font-size:clamp(40px,9vw,80px);color:var(--trace);
+  background:var(--surface);padding:4px 28px;border-radius:999px;box-shadow:0 6px 30px rgba(0,0,0,.12);animation:pop .5s cubic-bezier(.3,1.6,.6,1)}
+.party .s{position:absolute;left:50%;top:50%;font-size:34px;color:var(--star);animation:burst 1.1s ease-out forwards}
+@keyframes pop{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes burst{from{transform:translate(-50%,-50%) scale(.4);opacity:1}to{transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(1.2) rotate(160deg);opacity:0}}
+@media (prefers-reduced-motion:reduce){.party .s{display:none}.party .bravo{animation:none}}
+
+.actions{display:flex;justify-content:center;gap:14px;flex-wrap:wrap}
+.act{display:flex;flex-direction:column;align-items:center;gap:4px;font:inherit;font-size:14px;font-weight:600;color:var(--muted);
+  background:none;border:none;cursor:pointer;padding:4px;min-width:84px}
+.act .ic{width:68px;height:68px;border-radius:50%;display:grid;place-items:center;background:var(--surface);border:2px solid var(--line);color:var(--ink)}
+.act.main .ic{background:var(--guide);border-color:var(--guide);color:var(--surface)}
+.act:hover .ic{border-color:var(--guide)}
+.act:focus-visible{outline:none}.act:focus-visible .ic{outline:3px solid var(--guide);outline-offset:3px}
+.act svg{width:32px;height:32px}
+
+.families{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
+.fam{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px 14px}
+.fam h2{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 8px;font-weight:600}
+.fam .letters{display:flex;flex-wrap:wrap;gap:8px}
+.lt{position:relative;font-family:var(--f-display);font-weight:600;font-size:28px;line-height:1;width:58px;height:62px;border-radius:14px;border:2px solid var(--line);
+  background:var(--bg);color:var(--ink);cursor:pointer;display:grid;place-items:center;padding-bottom:6px}
+.lt:hover{border-color:var(--guide)}
+.lt:focus-visible{outline:3px solid var(--guide);outline-offset:2px}
+.lt[aria-pressed="true"]{border-color:var(--trace);background:var(--band)}
+.lt .stars{position:absolute;bottom:3px;left:0;right:0;text-align:center;font-family:var(--f-body);font-size:10px;color:var(--star);letter-spacing:1px}
+
+.adult{border-top:1px solid var(--line);padding-top:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}
+.adult h3{font-family:var(--f-display);font-weight:600;font-size:17px;margin:0 0 4px}
+.adult p{margin:0;color:var(--muted);font-size:15px;max-width:60ch}
+.opt{display:flex;align-items:center;gap:8px;font-size:15px;margin-top:8px}
+</style>
+<style>body{margin:0}[hidden]{display:none!important}.site-back{align-self:flex-start;font-size:14px;font-weight:500;color:var(--muted);text-decoration:none}.site-back:hover{color:var(--ink)}</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="site-back" href="index.html">← Retour au niveau</a>
+  <header>
+    <div class="eyebrow">Maternelle · Écriture en capitales d'imprimerie</div>
+    <h1>Capitales au doigt</h1>
+    <p class="lede">La lettre se trace d'abord toute seule. Ensuite, l'enfant pose le doigt sur le point vert et suit le chemin gris dans le sens des flèches. Le trait ne se colore que dans le bon sens.</p>
+  </header>
+
+  <div class="slate">
+    <svg id="board" viewBox="0 0 600 400" aria-label="Ardoise pour tracer la lettre"></svg>
+    <div class="party" id="party" hidden></div>
+  </div>
+
+  <div class="actions">
+    <button class="act" id="watch"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span>Regarder</button>
+    <button class="act" id="again"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></span>Recommencer</button>
+    <button class="act main" id="next"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>Lettre suivante</button>
+  </div>
+
+  <div class="families" id="families"></div>
+
+  <section class="adult">
+    <div>
+      <h3>Pour l'adulte</h3>
+      <p>Les lettres sont rangées par familles de geste : les traits droits, les obliques, les ronds et les lettres qui mélangent traits et ronds. Chaque trait part du haut. Commencer par une famille aide l'enfant à retrouver le même mouvement d'une lettre à l'autre.</p>
+    </div>
+    <div>
+      <h3>Après l'écran</h3>
+      <p>Quelques minutes suffisent. Faites ensuite reproduire la lettre avec un crayon, sur papier ligné ou dans du sable : l'écran montre le sens du geste, la main doit encore apprendre la tenue du crayon.</p>
+    </div>
+    <div>
+      <h3>Réglages</h3>
+      <label class="opt"><input type="checkbox" id="optArrows" checked> Afficher les flèches de sens</label>
+      <label class="opt"><input type="checkbox" id="optEasy" checked> Tracé facile (chemin large)</label>
+      <label class="opt"><input type="checkbox" id="optAuto" checked> Montrer la lettre à chaque changement</label>
+    </div>
+  </section>
+</div>
+
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const NS='http://www.w3.org/2000/svg';
+const svg=$('board');
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* Repères : ligne du haut 80, ligne d'interligne 200, ligne d'écriture 300, ligne du bas 400 */
+const LETTERS={
+ A:['M50,110 L-8,300','M50,110 L108,300','M17,230 L83,230'],
+ B:['M6,110 L6,300','M6,110 L57,110 C102,110 102,205 57,205 L6,205','M6,205 L64,205 C114,205 114,300 64,300 L6,300'],
+ C:['M102,142 C82,104 -5,104 -5,205 C-5,306 82,306 102,268'],
+ D:['M6,110 L6,300','M6,110 L38,110 C122,110 122,300 38,300 L6,300'],
+ E:['M6,110 L6,300','M6,110 L96,110','M6,205 L79,205','M6,300 L96,300'],
+ F:['M6,110 L6,300','M6,110 L96,110','M6,205 L79,205'],
+ G:['M102,142 C82,104 -5,104 -5,205 C-5,306 94,306 105,255 L105,215 L57,215'],
+ H:['M-1,110 L-1,300','M101,110 L101,300','M-1,205 L101,205'],
+ I:['M50,110 L50,300'],
+ J:['M79,110 L79,250 C79,312 -2,312 -5,262'],
+ K:['M6,110 L6,300','M101,110 L9,205 L101,300'],
+ L:['M6,110 L6,300 L101,300'],
+ M:['M-5,110 L-5,300','M-5,110 L50,235 L105,110','M105,110 L105,300'],
+ N:['M4,110 L4,300','M4,110 L96,300','M96,110 L96,300'],
+ O:['M50,110 C9,110 -11,153 -11,205 C-11,257 9,300 50,300 C91,300 111,257 111,205 C111,153 91,110 50,110'],
+ P:['M6,110 L6,300','M6,110 L57,110 C108,110 108,210 57,210 L6,210'],
+ Q:['M50,110 C9,110 -11,153 -11,205 C-11,257 9,300 50,300 C91,300 111,257 111,205 C111,153 91,110 50,110','M64,250 L114,306'],
+ R:['M6,110 L6,300','M6,110 L57,110 C108,110 108,210 57,210 L6,210','M50,210 L105,300'],
+ S:['M99,140 C85,104 1,104 1,150 C1,200 102,198 102,250 C102,308 4,308 -5,266'],
+ T:['M-8,110 L108,110','M50,110 L50,300'],
+ U:['M-1,110 L-1,240 C-1,316 101,316 101,240 L101,110'],
+ V:['M-8,110 L50,300 L108,110'],
+ W:['M-17,110 L17,300 L50,175 L83,300 L117,110'],
+ X:['M-1,110 L101,300','M101,110 L-1,300'],
+ Y:['M-1,110 L50,205','M101,110 L50,205 L50,300'],
+ Z:['M-1,110 L101,110 L-1,300 L101,300']
+};
+const FAMILIES=[
+ {name:'Les traits droits',letters:['I','L','T','E','F','H']},
+ {name:'Les obliques',letters:['V','A','X','Y','Z','K','N','M','W']},
+ {name:'Les ronds',letters:['O','C','Q','G','S']},
+ {name:'Traits et ronds',letters:['D','P','B','R','J','U']}
+];
+const ORDER=FAMILIES.flatMap(f=>f.letters);
+
+let cur='I',strokes=[],si=0,prog=0,tracing=false,finished=false,demoRun=0;
+let arrowsOn=true,easy=true,auto=true;
+let stars={};try{stars=JSON.parse(localStorage.getItem('capital-stars')||'{}')}catch(e){}
+const saveStars=()=>{try{localStorage.setItem('capital-stars',JSON.stringify(stars))}catch(e){}};
+
+const el=(tag,attrs,parent)=>{const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e};
+const width=()=>easy?30:20;
+const tol=()=>easy?40:26;
+
+function build(){
+  svg.innerHTML='';
+  const defs=LETTERS[cur];
+  // mesure de la lettre
+  const tmp=el('g',{},svg);
+  defs.forEach(d=>{if(typeof d==='string')el('path',{d},tmp);else el('circle',{cx:d.dot[0],cy:d.dot[1],r:4},tmp)});
+  const bb=tmp.getBBox();svg.removeChild(tmp);
+  const pad=70,vw=Math.max(260,bb.width+pad*2);
+  const x0=bb.x-(vw-bb.width)/2;
+  svg.setAttribute('viewBox',`${x0} 70 ${vw} 260`);
+  // lignage
+  const g=el('g',{},svg);
+  el('rect',{x:x0-50,y:110,width:vw+100,height:190,fill:'var(--band)'},g);
+  [[110,2,'6 8'],[205,1.5,'4 10'],[300,3,'']].forEach(([y,w,da])=>
+    el('line',{x1:x0-50,x2:x0+vw+50,y1:y,y2:y,stroke:y===300?'var(--guide)':'var(--line)','stroke-width':w,'stroke-dasharray':da},g));
+  // tracés
+  const layer=el('g',{},svg);
+  strokes=defs.map(d=>{
+    if(typeof d!=='string'){
+      const m=el('circle',{cx:d.dot[0],cy:d.dot[1],r:width()/2+2,fill:'var(--model)'},layer);
+      const done=el('circle',{cx:d.dot[0],cy:d.dot[1],r:width()/2,fill:'var(--trace)',opacity:0},layer);
+      return {dot:true,x:d.dot[0],y:d.dot[1],done,len:1,pts:[{x:d.dot[0],y:d.dot[1]}]};
+    }
+    const model=el('path',{d,class:'model','stroke-width':width()},layer);
+    const len=model.getTotalLength();
+    const pts=[];const N=Math.max(2,Math.ceil(len/3));
+    for(let i=0;i<=N;i++){const p=model.getPointAtLength(len*i/N);pts.push({x:p.x,y:p.y})}
+    return {d,model,len,pts};
+  });
+  // flèches
+  const ar=el('g',{class:'arrows'},layer);ar.style.display=arrowsOn?'':'none';
+  strokes.forEach(s=>{if(s.dot)return;
+    for(let L=34;L<s.len-14;L+=62){
+      const a=s.model.getPointAtLength(L),b=s.model.getPointAtLength(Math.min(s.len,L+2));
+      const ang=Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI;
+      el('path',{d:'M-5,-6 L5,0 L-5,6',class:'arrow',fill:'none',stroke:'var(--surface)','stroke-width':3,'stroke-linecap':'round','stroke-linejoin':'round',transform:`translate(${a.x},${a.y}) rotate(${ang})`},ar);
+    }});
+  // couches de progression
+  strokes.forEach(s=>{if(s.dot)return;
+    s.done=el('path',{d:s.d,class:'done','stroke-width':width()-6,'stroke-dasharray':`${s.len} ${s.len}`,'stroke-dashoffset':s.len},layer)});
+  // démo
+  svg._demo=el('path',{class:'demo','stroke-width':width()-8,opacity:0},layer);
+  svg._pen=el('circle',{r:11,fill:'var(--guide)',opacity:0},layer);
+  // point de départ
+  svg._ring=el('circle',{class:'startring',r:20},svg);
+  svg._start=el('circle',{class:'startdot',r:13},svg);
+  svg._finger=el('circle',{r:9,fill:'var(--trace)',opacity:0},svg);
+  si=0;prog=0;finished=false;placeStart();
+}
+
+function placeStart(){
+  if(si>=strokes.length){svg._ring.style.display=svg._start.style.display='none';return}
+  const s=strokes[si],p=s.pts[Math.min(prog,s.pts.length-1)];
+  svg._ring.style.display=svg._start.style.display='';
+  svg._ring.setAttribute('cx',p.x);svg._ring.setAttribute('cy',p.y);
+  svg._start.setAttribute('cx',p.x);svg._start.setAttribute('cy',p.y);
+}
+function paint(){
+  strokes.forEach((s,i)=>{
+    const f=i<si?1:i===si?(s.dot?0:prog/(s.pts.length-1)):0;
+    if(s.dot)s.done.setAttribute('opacity',i<si?1:0);
+    else s.done.setAttribute('stroke-dashoffset',s.len*(1-f));
+  });
+}
+
+function toSvg(e){const pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;return pt.matrixTransform(svg.getScreenCTM().inverse())}
+const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+
+svg.addEventListener('pointerdown',e=>{
+  if(finished||demoRun)return;
+  const p=toSvg(e),s=strokes[si];if(!s)return;
+  const target=s.pts[Math.min(prog,s.pts.length-1)];
+  if(dist(p,target)>tol()*1.4){svg._ring.classList.add('urge');setTimeout(()=>svg._ring.classList.remove('urge'),900);return}
+  svg.setPointerCapture(e.pointerId);
+  if(s.dot){si++;prog=0;paint();placeStart();checkEnd();return}
+  tracing=true;move(p);
+});
+svg.addEventListener('pointermove',e=>{if(tracing)move(toSvg(e))});
+const stop=()=>{tracing=false;svg._finger.setAttribute('opacity',0)};
+svg.addEventListener('pointerup',stop);svg.addEventListener('pointercancel',stop);
+
+function move(p){
+  const s=strokes[si];
+  svg._finger.setAttribute('cx',p.x);svg._finger.setAttribute('cy',p.y);svg._finger.setAttribute('opacity',.9);
+  let best=-1,bd=1e9;
+  const hi=Math.min(s.pts.length-1,prog+16);
+  for(let i=prog;i<=hi;i++){const d=dist(p,s.pts[i]);if(d<bd){bd=d;best=i}}
+  if(bd<tol()&&best>prog){prog=best}
+  if(prog>=s.pts.length-3){si++;prog=0;tracing=false;svg._finger.setAttribute('opacity',0)}
+  paint();placeStart();checkEnd();
+}
+
+function checkEnd(){
+  if(si<strokes.length)return;
+  finished=true;stars[cur]=Math.min(3,(stars[cur]||0)+1);saveStars();renderFamilies();
+  const party=$('party');party.innerHTML='<div class="bravo">Bravo !</div>';
+  for(let i=0;i<14;i++){const sp=document.createElement('span');sp.className='s';sp.textContent='★';
+    const a=i/14*Math.PI*2,r=140+Math.random()*90;sp.style.setProperty('--dx',Math.cos(a)*r+'px');sp.style.setProperty('--dy',Math.sin(a)*r+'px');party.appendChild(sp)}
+  party.hidden=false;setTimeout(()=>{party.hidden=true},1800);
+}
+
+function demo(){
+  const run=++demoRun;$('party').hidden=true;
+  si=0;prog=0;finished=false;paint();svg._ring.style.display=svg._start.style.display='none';
+  const d=svg._demo,pen=svg._pen;
+  if(reduce){demoRun=0;placeStart();return}
+  let k=0;
+  const nextStroke=()=>{
+    if(run!==demoRun)return;
+    if(k>=strokes.length){setTimeout(()=>{if(run!==demoRun)return;d.setAttribute('opacity',0);pen.setAttribute('opacity',0);demoRun=0;placeStart()},500);return}
+    const s=strokes[k++];
+    if(s.dot){pen.setAttribute('cx',s.x);pen.setAttribute('cy',s.y);pen.setAttribute('opacity',1);setTimeout(nextStroke,500);return}
+    d.setAttribute('d',s.d);d.setAttribute('stroke-dasharray',`${s.len} ${s.len}`);d.setAttribute('stroke-dashoffset',s.len);d.setAttribute('opacity',1);
+    // garde les traits déjà montrés
+    const keep=d.cloneNode();keep.removeAttribute('stroke-dashoffset');
+    const t0=performance.now(),dur=s.len/150*1000;
+    const step=now=>{if(run!==demoRun)return;const f=Math.min(1,(now-t0)/dur);
+      d.setAttribute('stroke-dashoffset',s.len*(1-f));const p=s.model.getPointAtLength(s.len*f);
+      pen.setAttribute('cx',p.x);pen.setAttribute('cy',p.y);pen.setAttribute('opacity',1);
+      if(f<1)requestAnimationFrame(step);else{keep.setAttribute('class','demo shown');keep.setAttribute('stroke-dashoffset',0);d.parentNode.insertBefore(keep,d);setTimeout(nextStroke,250)}};
+    requestAnimationFrame(step);
+  };
+  setTimeout(nextStroke,300);
+}
+function clearDemo(){svg.querySelectorAll('.shown').forEach(n=>n.remove())}
+
+function select(l){
+  cur=l;demoRun=0;$('party').hidden=true;build();renderFamilies();
+  if(auto)demo();
+}
+// les traits montrés s'effacent dès que l'enfant commence
+svg.addEventListener('pointerdown',()=>{if(!demoRun)clearDemo()},true);
+
+function renderFamilies(){
+  const box=$('families');box.innerHTML='';
+  FAMILIES.forEach(f=>{
+    const d=document.createElement('div');d.className='fam';
+    d.innerHTML='<h2>'+f.name+'</h2>';const row=document.createElement('div');row.className='letters';
+    f.letters.forEach(l=>{const b=document.createElement('button');b.className='lt';b.setAttribute('aria-pressed',l===cur);
+      b.setAttribute('aria-label','Lettre '+l);b.innerHTML=l+'<span class="stars">'+'★'.repeat(stars[l]||0)+'</span>';
+      b.onclick=()=>select(l);row.appendChild(b)});
+    d.appendChild(row);box.appendChild(d);
+  });
+}
+
+$('watch').onclick=()=>{clearDemo();demo()};
+$('again').onclick=()=>{demoRun=0;clearDemo();build()};
+$('next').onclick=()=>select(ORDER[(ORDER.indexOf(cur)+1)%ORDER.length]);
+$('optArrows').onchange=e=>{arrowsOn=e.target.checked;const a=svg.querySelector('.arrows');if(a)a.style.display=arrowsOn?'':'none'};
+$('optEasy').onchange=e=>{easy=e.target.checked;demoRun=0;build()};
+$('optAuto').onchange=e=>{auto=e.target.checked};
+
+renderFamilies();build();if(auto)demo();
+})();
+</script>
+</body>
+</html>
