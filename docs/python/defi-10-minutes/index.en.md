@@ -6,7 +6,7 @@ Each day: a short video, the code to type and a mini exercise.
 
 ## Planned episodes
 
-1. Day 1: print a message with `print` <span class="bientot">Coming soon</span>
+1. Day 1: print a message with `print` <a href="https://youtube.com/shorts/-5drTOUAvDk?si=GSaKBSHGDGvIyDtc" target="_blank" rel="noopener noreferrer" class="bientot">Watch on YouTube</a>
 2. Day 2: variables <span class="bientot">Coming soon</span>
 3. Day 3: ask for an answer with `input` <span class="bientot">Coming soon</span>
 4. Day 4: calculate with Python <span class="bientot">Coming soon</span>
